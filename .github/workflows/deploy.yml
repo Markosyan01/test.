@@ -1,0 +1,52 @@
+name: Deploy EC2 Monitor
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key
+          chmod 600 ~/.ssh/ec2_key
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy files
+        run: |
+          ssh -i ~/.ssh/ec2_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+            "sudo mkdir -p /var/www/server-monitor /opt/server-monitor"
+
+          scp -i ~/.ssh/ec2_key \
+            index.html api.py \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/tmp/
+
+          ssh -i ~/.ssh/ec2_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            sudo cp /tmp/index.html /var/www/server-monitor/index.html &&
+            sudo cp /tmp/api.py /opt/server-monitor/api.py &&
+            sudo chmod +x /opt/server-monitor/api.py
+          '
+
+      - name: Configure Nginx and service
+        run: |
+          scp -i ~/.ssh/ec2_key \
+            nginx.conf server-monitor.service \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/tmp/
+
+          ssh -i ~/.ssh/ec2_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            sudo cp /tmp/nginx.conf /etc/nginx/sites-available/server-monitor &&
+            sudo ln -sf /etc/nginx/sites-available/server-monitor /etc/nginx/sites-enabled/server-monitor &&
+            sudo rm -f /etc/nginx/sites-enabled/default &&
+            sudo cp /tmp/server-monitor.service /etc/systemd/system/server-monitor.service &&
+            sudo systemctl daemon-reload &&
+            sudo systemctl enable --now server-monitor &&
+            sudo nginx -t &&
+            sudo systemctl reload nginx
+          '
