@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EC2 Server Monitor</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:#0b1020;color:#eef2ff}
+.container{max-width:1050px;margin:auto;padding:48px 22px}.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px}
+h1{margin:0;font-size:30px}.status{padding:8px 13px;border-radius:20px;background:#14213d;color:#7dd3fc;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}.card{background:#121a2d;border:1px solid #26324d;border-radius:20px;padding:24px;box-shadow:0 15px 40px #0003}
+.label{color:#94a3b8;font-size:14px;margin-bottom:12px}.value{font-size:42px;font-weight:700}.bar{height:10px;background:#202b43;border-radius:10px;margin-top:18px;overflow:hidden}.fill{height:100%;width:0%;border-radius:10px;transition:width .5s}
+.info{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:20px}.mini{background:#121a2d;border:1px solid #26324d;border-radius:16px;padding:18px}.mini b{display:block;font-size:20px;margin-top:7px}
+footer{text-align:center;color:#64748b;margin-top:30px;font-size:13px}
+@media(max-width:700px){.grid,.info{grid-template-columns:1fr}.header{gap:15px;align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header"><h1>EC2 Server Monitor</h1><div class="status" id="status">Connecting...</div></div>
+<div class="grid">
+<div class="card"><div class="label">CPU Usage</div><div class="value" id="cpu">--%</div><div class="bar"><div class="fill" id="cpuBar"></div></div></div>
+<div class="card"><div class="label">RAM Usage</div><div class="value" id="ram">--%</div><div class="bar"><div class="fill" id="ramBar"></div></div></div>
+</div>
+<div class="info">
+<div class="mini"><span class="label">Memory</span><b id="memory">--</b></div>
+<div class="mini"><span class="label">Disk</span><b id="disk">--</b></div>
+<div class="mini"><span class="label">Uptime</span><b id="uptime">--</b></div>
+</div>
+<footer>Updates every 2 seconds</footer>
+</div>
+<script>
+async function update(){
+ try{
+  const r=await fetch('/api/stats',{cache:'no-store'});
+  const d=await r.json();
+  document.getElementById('cpu').textContent=d.cpu+'%';
+  document.getElementById('ram').textContent=d.ram+'%';
+  document.getElementById('cpuBar').style.width=d.cpu+'%';
+  document.getElementById('ramBar').style.width=d.ram+'%';
+  document.getElementById('memory').textContent=d.memory;
+  document.getElementById('disk').textContent=d.disk;
+  document.getElementById('uptime').textContent=d.uptime;
+  document.getElementById('status').textContent='● Online';
+ }catch(e){document.getElementById('status').textContent='● Offline'}
+}
+update();setInterval(update,2000);
+</script>
+</body>
+</html>

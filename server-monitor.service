@@ -1,0 +1,14 @@
+[Unit]
+Description=EC2 Server Monitor API
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/server-monitor
+ExecStart=/usr/bin/python3 /opt/server-monitor/api.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
